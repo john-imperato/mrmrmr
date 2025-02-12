@@ -1,0 +1,66 @@
+---
+title: "sample_run_54188"
+output: html_notebook
+date: "2025-02-12"
+---
+
+This notebook analyzes capture-mark-recapture data using the *mrmr* and *mrmrmr* packages.
+
+## Install the mrmr and mrmrmr packages
+
+```{r}
+
+# install cmdstanr and cmdstan
+install.packages("cmdstanr", repos = c("https://mc-stan.org/r-packages/", getOption("repos")))
+cmdstanr::install_cmdstan()
+
+# install mrmr and mrmrmr
+remotes::install_github("SNARL1/mrmr")
+remotes::install_github("john-imperato/mrmrmr")
+
+```
+
+## Load required packages
+
+```{r}
+
+library(dplyr)
+library(readr)
+library(tibble)
+library(cmdstanr)
+library(mrmr)
+library(mrmrmr)
+library(patchwork)
+
+```
+
+## Create required data sets
+
+```{r}
+
+captures <- read_csv(here::here("data", "54188_capture.csv"))
+surveys <- read_csv(here::here("data", "54188_survey.csv"))
+
+```
+
+## Clean data with mrmr
+
+```{r}
+
+data_54188_TVD <- mrmr::clean_data(captures, surveys)
+
+```
+
+## Fit model with session-specific detection probabilities 
+
+```{r}
+
+model_54188_TVD <- mrmrmr::fit_model_custom(data = data_54188_TVD,
+                                            chains = 4,
+                                            parallel_chains = 4,
+                                            threads_per_chain = 2)
+
+```
+
+
+
