@@ -1,0 +1,14 @@
+Package: mrmrmr
+Title: mrmrmr
+Version: 0.0.0.9000
+Authors@R: 
+     person(given = "John", family = "Imperato", email = "jti9@cornell.edu", role = c("aut", "cre"))
+Description: Model refinement for the mark-recapture miscellany in R
+    (mrmr) package.
+License: GPL-3
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.2
+Imports:
+  cmdstanr
+    
