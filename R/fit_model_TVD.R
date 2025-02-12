@@ -1,4 +1,6 @@
-fit_model_custom <- function(
+#' @export
+
+fit_model_TVD <- function(
     data,
     seed = NULL,
     refresh = NULL,
