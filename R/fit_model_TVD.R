@@ -1,5 +1,4 @@
 #' @export
-
 fit_model_TVD <- function(
     data,
     seed = NULL,
