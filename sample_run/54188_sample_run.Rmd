@@ -11,8 +11,8 @@ This notebook analyzes capture-mark-recapture data using the *mrmr* and *mrmrmr*
 ```{r}
 
 # install cmdstanr and cmdstan
-install.packages("cmdstanr", repos = c("https://mc-stan.org/r-packages/", getOption("repos")))
-cmdstanr::install_cmdstan()
+remotes::install_github("stan-dev/cmdstanr")
+cmdstanr::install_cmdstan(overwrite = TRUE)
 
 # install mrmr and mrmrmr
 remotes::install_github("SNARL1/mrmr")
@@ -31,6 +31,7 @@ library(cmdstanr)
 library(mrmr)
 library(mrmrmr)
 library(patchwork)
+library(bayesplot)
 
 ```
 
@@ -51,16 +52,39 @@ data_54188_TVD <- mrmr::clean_data(captures, surveys)
 
 ```
 
-## Fit model with session-specific detection probabilities 
+## Fit model with session-specific detection probabilities
 
 ```{r}
 
-model_54188_TVD <- mrmrmr::fit_model_custom(data = data_54188_TVD,
+model_54188_TVD <- mrmrmr::fit_model_TVD(data = data_54188_TVD,
                                             chains = 4,
                                             parallel_chains = 4,
-                                            threads_per_chain = 2)
+                                            threads_per_chain = 2,
+                                            adapt_delta = 0.99)
+
+write_rds(model_54188_TVD, here::here("sample_run", "54188_model_TVD.rds"))
 
 ```
 
+```{r}
 
+summary_54188 <- model_54188_TVD$m_fit$summary()
 
+View(summary_54188)
+
+```
+
+### Diagnose potential non-convergence of the MCMC algorithm
+
+-   Inspect traceplots and parameter summary table. In table, are any R~hat~ values $\ge 1.01$?
+
+```{r model-diagnostics}
+pars_to_plot <- c('alpha_lambda', 
+                  'sigma_lambda', 
+                  'beta_phi', 
+                  'sigma_phi', 
+                  'beta_detect')
+bayesplot::mcmc_trace(model_54188_TVD$m_fit$draws(pars_to_plot))
+
+model_54188_TVD$m_fit$summary(pars_to_plot)
+```
