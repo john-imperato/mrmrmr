@@ -35,7 +35,7 @@ fit_model_TVD <- function(
   
   stan_file <- system.file("stan", "twostate_2.0.stan", package = "mrmrmr", mustWork = TRUE)
   
-  model <- cmdstanr::cmdstan_model(stan_file, ...)
+  model <- cmdstanr::cmdstan_model(stan_file, cpp_options = list(stan_threads = TRUE), ...)
   
   m_fit <- model$sample(
     data = data$stan_d,
@@ -77,5 +77,3 @@ fit_model_TVD <- function(
   
   list(m_fit = m_fit, data = data)
 }
-
-
