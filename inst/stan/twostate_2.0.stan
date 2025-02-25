@@ -373,7 +373,7 @@ for (t in 2:(T - 1)) {
         al[i, t - 1] = s[i, t] == 2;
       }
       for (t in 1:Tm1) {
-        d[i, t] = s[i, t] == al[i, t];I wa
+        d[i, t] = s[i, t] == al[i, t];
       }
       alive[i] = sum(al[i]);
     }
