@@ -244,32 +244,24 @@ model {
 // ============================================================================
 
 generated quantities {
-  // Latent states for each individual and primary period:
+  // Top-level declarations:
   array[M, T] int<lower=1, upper=3> s;
-  // Superpopulation size:
   int<lower=0> Nsuper;
-  // Abundance and recruitment for periods 2 through T:
-  array[Tm1] int<lower=0> N;  // where Tm1 = T - 1 (set in transformed data block)
-  array[Tm1] int<lower=0> B;
+  array[Tm1] int<lower=0> N;      // Abundance for periods 2 through T
+  array[Tm1] int<lower=0> B;      // Recruitment for periods 2 through T
+  vector[T-2] overall_phi;       // Overall survival for transitions (period 2->3, ..., T-1->T)
+  vector[Jtot] p;                // Detection probabilities for each survey
+  vector[M] log_lik;             // Individual log-likelihoods
+  array[M] int w;
   
-  // Define overall survival for transitions between the "real" periods.
-  // Period 1 is a dummy, so the real survey periods are 2,...,T,
-  // so there are (T - 2) transitions (from period 2 to 3, ..., T-1 to T).
-  vector[T-2] overall_phi;  // average survival for each transition
-  
-  // Detection probability for each survey
-  vector[Jtot] p;
-  // Log-likelihood for each individual:
-  vector[M] log_lik;
-  
-  // ---------------------------------------------------------------
-  // Compute detection probabilities for each survey.
+  //-----------------------------------------------------------------
+  // 1) Compute detection probabilities for each survey.
   for (j in 1:Jtot) {
     p[j] = inv_logit(X_detect[j] * beta_detect + eps_detect[j]);
   }
   
-  // ---------------------------------------------------------------
-  // Compute latent states (s) and individual log-likelihoods using the forward algorithm.
+  //-----------------------------------------------------------------
+  // 2) Compute latent states (s) and individual log-likelihoods using the forward algorithm.
   {
     array[3, T, 3] real ps;
     vector[T] phi;
@@ -277,10 +269,8 @@ generated quantities {
     matrix[T, 3] forward_probabilities;
     
     for (i in 1:M) {
-      // Compute survival probabilities for each period.
       for (t in 1:T) {
         phi[t] = inv_logit(X_surv[i] * beta_phi + eps_phi[t]);
-        // Set up state transition probabilities:
         ps[1, t, 3] = 0;
         ps[2, t, 1] = 0;
         ps[3, t, 1] = 0;
@@ -290,7 +280,6 @@ generated quantities {
         ps[3, t, 3] = 1;
       }
       
-      // Adjust recruitment probabilities for introduced individuals.
       if (introduced[i]) {
         for (t in 1:(t_intro[i] - 1)) {
           ps[1, t, 1] = 1;
@@ -313,7 +302,6 @@ generated quantities {
         }
       }
       
-      // Adjust for removals.
       if (removed[i]) {
         if (t_remove[i] < T) {
           ps[2, t_remove[i] + 1, 2] = 0;
@@ -321,14 +309,12 @@ generated quantities {
         }
       }
       
-      // Compute the forward probabilities using the provided function.
       forward_probabilities = forward_prob(i, X_surv, beta_phi, eps_phi,
                                            logit_detect, lambda, gam_init,
                                            introduced, t_intro, removed,
                                            t_remove, prim_idx, any_surveys,
                                            J, j_idx, Y, Jtot, T);
       
-      // Backward sampling to obtain latent state trajectory for individual i.
       s[i, T] = categorical_rng(forward_probabilities[T, ]' / sum(forward_probabilities[T, ]));
       for (t_rev in 1:Tm1) {
         int t = T - t_rev;
@@ -337,21 +323,18 @@ generated quantities {
         s[i, t] = categorical_rng(tmp / sum(tmp));
       }
       
-      // Record the individual log-likelihood.
       log_lik[i] = log(sum(forward_probabilities[T, ]));
     }
   }
   
-  // ---------------------------------------------------------------
-  // Compute derived population-level quantities (for periods 2 through T).
+  //-----------------------------------------------------------------
+  // 3) Compute derived population-level quantities (for periods 2 through T).
   {
     array[M, Tm1] int al;
     array[M, Tm1] int d;
     array[M] int alive;
-    array[M] int w;
     
     for (i in 1:M) {
-      // For each individual, record whether it is alive (state 2) in periods 2 to T.
       for (t in 2:T) {
         al[i, t - 1] = s[i, t] == 2;
       }
@@ -371,16 +354,16 @@ generated quantities {
     }
     Nsuper = sum(w);
   }
-   //-----------------------------------------------------------------
-  // 4) Compute overall survival for real individuals only
+  
   //-----------------------------------------------------------------
+  // 4) Compute overall survival for real individuals only.
   {
-    // We have T-2 transitions (2->3, 3->4, ..., T-1->T).
+    // There are T-2 transitions: from period 2->3, 3->4, ..., T-1->T.
     for (t in 2:(T - 1)) {
       real sum_phi = 0;
       int real_count = 0;
       for (i in 1:M) {
-        if (w[i] == 1) {
+        if (w[i] == 1) {  // Only include real individuals
           sum_phi += inv_logit(X_surv[i] * beta_phi + eps_phi[t]);
           real_count += 1;
         }
