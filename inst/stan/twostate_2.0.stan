@@ -269,16 +269,21 @@ generated quantities {
   }
   
   // ---------------------------------------------------------------
-  // Compute overall survival probabilities for the transitions between the real periods.
+  // Compute overall survival probabilities for the transitions between the real periods for only real individuals.
   // That is, for t = 2,...,T-1, compute survival from period t to t+1.
   // overall_phi[1] corresponds to survival from period 2 to 3, etc.
-  for (t in 2:(T - 1)) {
-    real sum_phi = 0;
-    for (i in 1:M) {
+for (t in 2:(T - 1)) {
+  real sum_phi = 0;
+  int real_count = 0;
+  for (i in 1:M) {
+    // w[i] is 1 for real individuals, 0 for ghosts
+    if (w[i] == 1) {
       sum_phi += inv_logit(X_surv[i] * beta_phi + eps_phi[t]);
+      real_count += 1;
     }
-    overall_phi[t - 1] = sum_phi / M;
   }
+  overall_phi[t] = sum_phi / real_count;
+}
   
   // ---------------------------------------------------------------
   // Compute latent states (s) and individual log-likelihoods using the forward algorithm.
@@ -368,7 +373,7 @@ generated quantities {
         al[i, t - 1] = s[i, t] == 2;
       }
       for (t in 1:Tm1) {
-        d[i, t] = s[i, t] == al[i, t];
+        d[i, t] = s[i, t] == al[i, t];I wa
       }
       alive[i] = sum(al[i]);
     }
